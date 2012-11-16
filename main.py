@@ -62,8 +62,10 @@ class MainPage(webapp2.RequestHandler):
             bookmarks = db.GqlQuery("SELECT * FROM bookmark WHERE user = :1 ", u )
            ## self.response.out.write(bookmarks.count())
             for bkm in bookmarks:
-              self.response.out.write("""<a href="%s">%s</a> { <a href="delete?id=%s">delete</a> | <a href="read?u=%s" target="_blank">readability</a> }""" %
-                                    ( urllib.unquote(bkm.url) , urllib.unquote(bkm.title) , bkm.key() , bkm.url  ) )
+              self.response.out.write("""<a href="%s">%s</a> {
+<a href="delete?id=%s">Delete</a> | <a href="read?u=%s" target="_blank">Readability</a> |
+<a href="merge?m=1&u=%s">Merge</a> | <a href="merge?m=1&t=&id=%s">Edit</a> }""" %
+                                    ( urllib.unquote(bkm.url) , urllib.unquote(bkm.title) , bkm.key() , bkm.url , bkm.url , bkm.key()  ) )
               cont = urllib.unquote( bkm.content )
               self.response.out.write('<blockquote>%s</blockquote>' % cont )
               ##self.response.out.write('<sppan>%s</span><br/>' % bkm.user )
@@ -122,10 +124,10 @@ class Save(webapp2.RequestHandler):
 u = "You have already bookmarked this site.\\nHowever if you wish, the new save can be merged with the old one.\\nWould you like to proceed?\\nHitting the cancel button will save the bookmark separately.";
 function mergeRequest(){
 yo = confirm(u);
-if(yo){window.open('%s','_self');}
+if(yo){window.open("%s",'_self');}
 else{
 var scr=document.createElement('script');
-scr.setAttribute('src','%s');
+scr.setAttribute('src',"%s");
 document.getElementsByTagName('head')[0].appendChild(scr);
 }
 }
@@ -169,8 +171,9 @@ class SavePL(webapp2.RequestHandler):
           bm.put()
           self.redirect(str(self.request.get('u')))
         else:
-          url = users.create_login_url(self.request.uri)
-          self.response.out.write("window.open('"+Location_url+url+"','_self');")
+            self.redirect( users.create_login_url(self.request.uri) )
+            url = users.create_login_url(self.request.uri)
+            self.response.out.write("window.open('"+Location_url+url+"','_self');")
 
 class MergeForm(webapp2.RequestHandler):
   def get(self):
@@ -179,12 +182,22 @@ class MergeForm(webapp2.RequestHandler):
       u = user.user_id()
       url = self.request.get('u')
       title = self.request.get('t')
+      mode = self.request.get('m')
+      bid = self.request.get('id')
       cc = ''
       bookmarks = db.GqlQuery("SELECT * FROM bookmark WHERE user = :1 AND url = :2", u , url )
-      for bk in bookmarks:
-        cc += bk.content
-      cc += safe_unicode(unquote_u(self.request.get('c')))
-      self.response.out.write("""<script type='text/javascript'>function getContent(){document.getElementById('my-textarea').value = document.getElementById('my-content').innerHTML;}</script><div id="my-content" contenteditable="true">%s</div><form id="form" action="/mergesave" onsubmit="return getContent()" method="post"><textarea id="my-textarea" name="content" style="display:none"></textarea><input type="hidden" name="title" value="%s"><input type="hidden" name="url" value="%s"><input type="submit" value="Save Merged Bookmark"/></form>""" % (cc,title,url))
+      if (bid):
+          bookmarks = bookmarks =db.get(bid)
+   ##       bookmarks.filter('__key__ =', bid)
+          cc += bookmarks.content
+          url = bookmarks.url
+          title = bookmarks.title
+      else :
+          for bk in bookmarks:
+            cc += bk.content
+            cc += safe_unicode(unquote_u(self.request.get('c')))
+      self.response.out.write("""<script type='text/javascript'>function getContent(){document.getElementById('my-textarea').value = document.getElementById('my-content').innerHTML;}</script><div id="my-content" contenteditable="true">%s</div><form id="form" action="/mergesave" onsubmit="return getContent()" method="post"><textarea id="my-textarea" name="content" style="display:none"></textarea><input type="hidden" name="title" value="%s"><input type="hidden" name="mode" value="%s"><input type="hidden" name="url" value="%s"><input type="submit" value="Save Merged Bookmark"/></form>"""
+                              % (cc,title,mode,url))
     else:
       self.redirect(users.create_login_url(self.request.uri))
 
@@ -194,6 +207,7 @@ class MergeSave(webapp2.RequestHandler):
         if user:
           u = user.user_id()
           url = str(self.request.get('url'))
+          mode = str(self.request.get('mode'))
           content = safe_unicode(unquote_u(self.request.get('content')))
           cc = ''
           title = str(self.request.get('title'))
@@ -208,7 +222,10 @@ class MergeSave(webapp2.RequestHandler):
           bm.title = title
           bm.content = content
           bm.put()
-          self.redirect(cgi.escape(url))
+          if(mode == "1"):
+            self.redirect(cgi.escape(Location_url))
+          else:
+            self.redirect(cgi.escape(url))
         else:
           self.redirect(users.create_login_url(self.request.uri))
             

@@ -7,6 +7,17 @@ This was created because the current bookmakring sites make bookmarking a chore.
 
 ## Changelog
 
+16th nov 2012 \(2\)
+-----------------------------
+
+* edit form and merge form
+
+Todo's
+--------
+
+* the saving should be smoother
+* Major Bookmarklet change coming up :-)
+
 16th nov 2012
 -----------------------------
 
