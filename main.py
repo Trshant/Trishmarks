@@ -19,9 +19,16 @@ import cgi
 import webapp2
 import urllib
 import json
+import jinja2
+import os
+import datetime
+
+jinja_environment = jinja2.Environment(
+    loader=jinja2.FileSystemLoader(os.path.dirname(__file__)))
 
 from google.appengine.api import users
 from google.appengine.ext import db
+from google.appengine.ext.webapp import template
 
 Location_url = 'http://trshant-bookmarks.appspot.com' ## 'http://localhost:8081' ## 'http://trshant-bookmarks.appspot.com'
 
@@ -47,41 +54,49 @@ class bookmark(db.Model):
   title = db.StringProperty()
   content = db.TextProperty()  ##db.StringProperty(multiline=True)
   user = db.StringProperty()
+  date_save = db.DateProperty()
+
 
 class MainPage(webapp2.RequestHandler):
     def get(self):
         self.response.headers['Content-Type'] = "text/html; charset=utf-8"
-        self.response.out.write("""Welcome to <a href="javascript:((function(){Q='';ss='%s/save?c=';x=document;y=window;if(x.selection){Q=x.selection.createRange().text}else if(y.getSelection){Q=y.getSelection()}else if(x.getSelection){Q=x.getSelection()}for(i=0,l=Q.rangeCount;i<l;i++){ss+=escape(Q.getRangeAt(i).toString())+escape('<br/>')}ss+='&u='+escape(location.href)+'&t='+escape(document.title)+'';var scr=document.createElement('script');scr.setAttribute('src',ss);document.getElementsByTagName('head')[0].appendChild(scr);})())">[trishmarks]</a> .""" % Location_url)
+        
         user = users.get_current_user()
         if user:
-            greeting = ("Welcome, %s! (<a href=\"%s\">sign out</a>)" %
-                        (user.nickname(), users.create_logout_url("/")))
-            self.response.out.write("%s" % greeting)
-            self.response.out.write("""<hr/>""")
             u = user.user_id();
-            bookmarks = db.GqlQuery("SELECT * FROM bookmark WHERE user = :1 ", u )
-           ## self.response.out.write(bookmarks.count())
-            for bkm in bookmarks:
-              self.response.out.write("""<a href="%s">%s</a> {
-<a href="delete?id=%s">Delete</a> | <a href="read?u=%s" target="_blank">Readability</a> |
-<a href="merge?m=1&u=%s">Merge</a> | <a href="merge?m=1&t=&id=%s">Edit</a> }""" %
-                                    ( urllib.unquote(bkm.url) , urllib.unquote(bkm.title) , bkm.key() , bkm.url , bkm.url , bkm.key()  ) )
-              cont = urllib.unquote( bkm.content )
-              self.response.out.write('<blockquote>%s</blockquote>' % cont )
-              ##self.response.out.write('<sppan>%s</span><br/>' % bkm.user )
+            bookmarks_query = db.GqlQuery("SELECT * FROM bookmark WHERE user = :1 ", u )
+            bookmarks = bookmarks_query
+            content = "";
+            
+            template_values = {
+				'username' : user.nickname() ,
+				'logout_url' : users.create_logout_url("/") ,
+				'content' : bookmarks ,
+				'loc_url': Location_url ,
+			}
+			
+            template = jinja_environment.get_template('logged_in_template.html')
+            self.response.out.write(template.render(template_values))
+			
+            ##path = os.path.join(os.path.dirname(__file__), 'logged_in_template.html')
+            ##self.response.out.write(template.render(path, template_values))
+			
               
         else:
-            greeting = ("Please <a href=\"%s\">Login</a>" % (users.create_login_url("/")))
-            self.response.out.write("%s" % greeting)
-            self.response.out.write("""<hr/>""")
-            self.response.out.write("""Please drag the bookmarklet link (This one -> <a href="javascript:((function(){Q='';ss='%s/save?c=';x=document;y=window;if(x.selection){Q=x.selection.createRange().text}else if(y.getSelection){Q=y.getSelection()}else if(x.getSelection){Q=x.getSelection()}for(i=0,l=Q.rangeCount;i<l;i++){ss+=escape(Q.getRangeAt(i).toString())+escape('<br/>')}ss+='&u='+escape(location.href)+'&t='+escape(document.title)+'';var scr=document.createElement('script');scr.setAttribute('src',ss);document.getElementsByTagName('head')[0].appendChild(scr);})())">[Trishmark]</a>) to your bookmark toolbar.<br/>
-After installing the bookmarklet you can use this by selecting part of the page and then clicking the bookmarklet.
-Your page and selected text will be saved and no time will be wasted.<br>
-This bookmarking site's USP is to keep out of your way as much as possible, but still be an invaluable assistant for the lang haul.""")
-    
-        ##y = '%u2014'
-        ##self.response.out.write('%s' % y )
-
+		
+            template_values = {
+                'loc_url' : Location_url ,
+                'login_url' : users.create_login_url("/") ,
+			}
+            
+            template = jinja_environment.get_template('landing_page.html')
+            self.response.out.write(template.render(template_values))
+			
+            ##path = os.path.join(os.path.dirname(__file__), 'landing_page.html')
+            ##self.response.out.write(template.render(path, template_values))
+			
+			
+            
 class SaveA(webapp2.RequestHandler):
     def get(self):
         user = users.get_current_user()
@@ -98,6 +113,7 @@ class SaveA(webapp2.RequestHandler):
             bm.title = title
           bm.content = self.request.get('c')
           bm.user = user.user_id()
+          bm.date_save = datetime.datetime.now().date()
           bm.put()
           
           response = json.dumps({'text':'success!'})
@@ -106,7 +122,7 @@ class SaveA(webapp2.RequestHandler):
         else:
           QueryString = self.request.query_string
           url = users.create_login_url('/savepl?'+QueryString)
-          self.response.out.write("window.open('"+Location_url+url+"','_self');")
+          self.response.out.write("window.open('"+url+"','_self');")
 
 class Save(webapp2.RequestHandler):
     def get(self):
@@ -144,6 +160,8 @@ mergeRequest();
               bm.title = title
             bm.content = safe_unicode(unquote_u(self.request.get('c'))) ##str(self.request.get('c'))
             bm.user = user.user_id()
+            bm.date_save = datetime.datetime.now().date()
+
             bm.put()
           
             response = json.dumps({'text':'success!'})
@@ -152,7 +170,7 @@ mergeRequest();
         else:
           QueryString = self.request.query_string
           url = users.create_login_url('/savepl?'+QueryString)
-          self.response.out.write("window.open('"+Location_url+url+"','_self');")
+          self.response.out.write("window.open('"+url+"','_self');")
 
 # save post login
 class SavePL(webapp2.RequestHandler):
@@ -168,38 +186,58 @@ class SavePL(webapp2.RequestHandler):
             bm.title = t
           bm.content = self.request.get('c')
           bm.user = user.user_id()
+          bm.date_save = datetime.datetime.now().date()
           bm.put()
           self.redirect(str(self.request.get('u')))
         else:
             self.redirect( users.create_login_url(self.request.uri) )
             url = users.create_login_url(self.request.uri)
-            self.response.out.write("window.open('"+Location_url+url+"','_self');")
+            self.response.out.write("window.open('"+url+"','_self');")
 
 class MergeForm(webapp2.RequestHandler):
   def get(self):
     user = users.get_current_user()
     if user:
-      u = user.user_id()
-      url = self.request.get('u')
-      title = self.request.get('t')
-      mode = self.request.get('m')
-      bid = self.request.get('id')
-      cc = ''
-      bookmarks = db.GqlQuery("SELECT * FROM bookmark WHERE user = :1 AND url = :2", u , url )
-      if (bid):
-          bookmarks = bookmarks =db.get(bid)
-   ##       bookmarks.filter('__key__ =', bid)
-          cc += bookmarks.content
-          url = bookmarks.url
-          title = bookmarks.title
-      else :
-          for bk in bookmarks:
-            cc += bk.content
-            cc += safe_unicode(unquote_u(self.request.get('c')))
-      self.response.out.write("""<script type='text/javascript'>function getContent(){document.getElementById('my-textarea').value = document.getElementById('my-content').innerHTML;}</script><div id="my-content" contenteditable="true">%s</div><form id="form" action="/mergesave" onsubmit="return getContent()" method="post"><textarea id="my-textarea" name="content" style="display:none"></textarea><input type="hidden" name="title" value="%s"><input type="hidden" name="mode" value="%s"><input type="hidden" name="url" value="%s"><input type="submit" value="Save Merged Bookmark"/></form>"""
-                              % (cc,title,mode,url))
+        u = user.user_id()
+        url = self.request.get('u')
+        title = self.request.get('t')
+        mode = self.request.get('m')
+        bid = self.request.get('id')
+        cc = ''
+        global temple_values
+        
+        bookmarks = db.GqlQuery("SELECT * FROM bookmark WHERE user = :1 AND url = :2", u , url )
+        if(bid):
+            bookmarks = bookmarks =db.get(bid)
+            cc   += bookmarks.content
+            url   = bookmarks.url
+            title = bookmarks.title
+			
+            button_text = '&nbsp;Save&nbsp;?&nbsp;'
+			
+        else:
+            for bk in bookmarks:
+                cc += bk.content
+            button_text = '&nbsp;Merge&nbsp;?&nbsp;'
+
+        nick = user.nickname()
+        logout_url = users.create_logout_url("/")
+        temple_values = {
+		    'title' : title ,
+		    'mode' : mode ,
+		    'url' : url ,
+            'username' : nick ,
+            'logout_url' : logout_url ,
+            'loc_url': Location_url ,
+            'content' : cc,
+            'button_text' : button_text ,
+	    }
+		
+        templater = jinja_environment.get_template('edit.html')
+        self.response.out.write(templater.render(temple_values))
+	  
     else:
-      self.redirect(users.create_login_url(self.request.uri))
+        self.redirect(users.create_login_url(self.request.uri))
 
 class MergeSave(webapp2.RequestHandler):
     def post(self):
@@ -221,6 +259,7 @@ class MergeSave(webapp2.RequestHandler):
           bm.user = u
           bm.title = title
           bm.content = content
+          bm.date_save = datetime.datetime.now().date()
           bm.put()
           if(mode == "1"):
             self.redirect(cgi.escape(Location_url))
@@ -241,6 +280,7 @@ class Read(webapp2.RequestHandler):
     def get(self):
         link = str('http://www.readability.com/read?url='+self.request.get('u') )
         self.redirect(link)
+
 
 app = webapp2.WSGIApplication([('/', MainPage),
                               ('/save', Save),

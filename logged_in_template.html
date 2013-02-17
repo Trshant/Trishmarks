@@ -1,0 +1,76 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+
+<link rel="stylesheet" href="./includes/malo.css" type="text/css" media="screen, projection">
+<title>Trishmarks - {{ username }} </title>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+<script type="text/javascript">
+/*
+$(document).ready(function(){
+	$('a.someclass').mouseover(function(){
+    	    	div = $('div.someclass');
+    	    	div.stop().animate({visibility: visible}, 150);
+	}).mouseout(function(){
+    	    	div.stop().animate({visibility: hidden}, 150);
+	});
+});
+*/
+</script>
+<style>
+
+.dp20:hover , .dp25:hover , .dp33:hover , .dp50:hover  { border: 2px solid red ; background-color: LightGrey; }
+
+.main {  margin:0 auto; width:980px; }
+
+.left { float : left; }
+.right { float : right; }
+.text-right { text-align : right; }
+
+.header { border: 2px solid red ; border-radius:4px ; color: #fff ; background-color: grey; margin: 0px; margin-left:-6px; }
+
+a { color: red; }
+
+.dp50 a , .dp25 a { font-weight: bold ; color: #000 ; }
+
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+
+<div class="main">
+
+<div class="header dp100">
+	<div class="left">
+		<h3><a href="{{ loc_url }}">Trishmarks</a></h3>
+	</div>
+	<div class="right">
+		<h4>Welcome, {{ username }} ! <a href="{{ logout_url }}">Logout</a> </h4>
+	</div>
+</div>
+
+<div class="clear">
+&nbsp;
+</div>
+
+<div class="dp100">
+{% for bkm in content %}
+	<div class="dp50"><a href="{{ bkm.url }}">{{ bkm.title }}</a> : {{ bkm.content }} 
+	<div class="left">{ <a href="delete?id={{ bkm.key() }}">D</a> | <a href="read?u={{ bkm.url }}\" target="_blank\">R</a> | <a href="merge?m=1&u={{ bkm.url }}">M</a> | <a href="merge?m=1&t=&id={{ bkm.key() }}">E</a> }
+	</div>
+	
+	{% if (bkm.date_save)  %}
+	    <div class="right">{{ bkm.date_save }}</div>
+	{% endif %}
+	</div>	
+{% endfor %}
+</div>
+
+</div>
+<div class="dp100"></div>
+ </div>
+</body>
+</html>

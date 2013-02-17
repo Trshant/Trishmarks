@@ -1,0 +1,65 @@
+/*
+	Malo - CSS Library
+	Author:Vladimir Carrer and trshant 
+	
+	Trshant
+	-------------
+	Added Csstickfooter from csstickyfooter.com
+*/
+
+/* CSS Reset */
+
+html, body, div, p{
+  margin: 0;
+  padding: 0;
+  border: 0;
+  }
+  
+/* CSS Grid */
+
+/*
+For center layout 
+Define your default width in %, px or em
+
+.main {  margin:0 auto; width:85%;}
+
+*/
+
+.dp20,
+.dp25,
+.dp33,
+.dp50,
+.dp100{float:left; display: inline; *margin-left:-0.04em; } /* IE margin hack */
+
+/* dp = div percet */
+
+.dp20{width:19%;}
+.dp25{width:23.60%;}
+.dp33{width:33.33%;}
+.dp50{width:48.50%;}
+.dp100{width:100%;}
+.clear{ clear:both;}
+
+.dp20 , .dp25 , .dp33 , .dp50  { margin: 0px ; border: 2px solid #fff ; border-radius:4px;  padding:3px; 	}
+
+
+html, body {height: 100%;}
+
+#wrap {min-height: 100%;}
+
+#main {overflow:auto;
+	padding-bottom: 35px;}  /* must be same height as the footer */
+
+#footer {position: relative;
+	margin-top: -35px; /* negative value of footer height */
+	height: 35px;
+	clear:both;} 
+
+/*Opera Fix*/
+body:before {
+	content:"";
+	height:100%;
+	float:left;
+	width:0;
+	margin-top:-32767px;/
+}
